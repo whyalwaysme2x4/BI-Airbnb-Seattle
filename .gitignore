@@ -1,0 +1,37 @@
+# Python cache and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Operating system temporary files
+.DS_Store
+Thumbs.db
+desktop.ini
+*.tmp
+*.temp
+~$*
+
+# Local editor settings
+.vscode/
+.idea/
+
+# Raw dataset files are large and should be downloaded from Kaggle.
+data/raw/*.csv
+!data/raw/.gitkeep
+
+# Keep processed outputs and Power BI dashboards in version control.
+!data/processed/
+!data/processed/*.csv
+!dashboard/
+!dashboard/*.pbix
