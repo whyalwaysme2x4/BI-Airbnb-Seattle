@@ -1,6 +1,12 @@
 # BI phân tích dữ liệu Airbnb Seattle
 
-Đây là project bài tập lớn môn Business Intelligence với đề tài phân tích dữ liệu Airbnb tại Seattle. Project xây dựng pipeline ETL bằng Python, tạo mô hình Data Warehouse dạng star schema và chuẩn bị dữ liệu đầu ra để trực quan hóa bằng Power BI.
+Đây là project bài tập lớn môn Business Intelligence với đề tài phân tích dữ liệu Airbnb tại Seattle. Project xây dựng pipeline từ dữ liệu thô đến Data Warehouse PostgreSQL và trực quan hóa bằng Power BI.
+
+Luồng xử lý chính:
+
+```text
+Raw CSV -> ETL Python -> PostgreSQL Data Warehouse -> Power BI
+```
 
 ## 1. Mục tiêu phân tích
 
@@ -44,9 +50,14 @@ BI-Airbnb-Seattle/
 │       ├── dim_room_type.csv
 │       └── fact_availability.csv
 ├── etl/
-│   └── etl_airbnb.py
+│   ├── etl_airbnb.py
+│   └── load_to_postgres.py
 ├── sql/
 │   └── schema.sql
+├── docs/
+│   ├── powerbi_guide.md
+│   └── postgresql_guide.md
+├── .env.example
 ├── requirements.txt
 └── README.md
 ```
@@ -60,6 +71,9 @@ python -m pip install -r requirements.txt
 Thư viện chính:
 
 - `pandas`: đọc CSV, làm sạch dữ liệu, xử lý bảng dimension/fact và xuất dữ liệu processed.
+- `sqlalchemy`: tạo kết nối PostgreSQL.
+- `psycopg2-binary`: driver PostgreSQL cho Python.
+- `python-dotenv`: đọc cấu hình database từ file `.env`.
 
 ## 5. Cách chạy ETL
 
@@ -79,6 +93,67 @@ Pipeline ETL thực hiện các bước:
 - Tạo các bảng dimension và fact.
 - Xuất kết quả vào `data/processed`.
 - In báo cáo kiểm tra dữ liệu cơ bản gồm số dòng, null quan trọng, min/max date và thống kê price.
+
+## 5.1 Cài PostgreSQL và tạo database
+
+Cài PostgreSQL từ:
+
+```text
+https://www.postgresql.org/download/
+```
+
+Tạo database cho project:
+
+```sql
+CREATE DATABASE airbnb_bi;
+```
+
+Tạo file `.env` từ file mẫu:
+
+```bash
+copy .env.example .env
+```
+
+Trên macOS/Linux:
+
+```bash
+cp .env.example .env
+```
+
+Cấu hình `.env`:
+
+```env
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=airbnb_bi
+DB_USER=postgres
+DB_PASSWORD=your_password
+```
+
+## 5.2 Load dữ liệu vào PostgreSQL
+
+Sau khi chạy ETL và có đủ 5 file CSV trong `data/processed`, chạy:
+
+```bash
+python etl/load_to_postgres.py
+```
+
+Script này sẽ:
+
+- Đọc cấu hình PostgreSQL từ `.env`.
+- Chạy `sql/schema.sql` để tạo lại schema `airbnb_seattle` và 5 bảng Data Warehouse.
+- Load dữ liệu theo đúng thứ tự dimension trước, fact sau.
+- In số dòng đã load cho từng bảng.
+
+Thứ tự load:
+
+1. `dim_date`
+2. `dim_room_type`
+3. `dim_location`
+4. `dim_listing`
+5. `fact_availability`
+
+Hướng dẫn chi tiết xem thêm: `docs/postgresql_guide.md`.
 
 ## 6. Mô hình Data Warehouse
 
@@ -304,7 +379,7 @@ Vì vậy, `booked_flag` không chắc chắn tuyệt đối là booking thật.
 
 Do đó, các chỉ số như `Estimated Occupancy Rate` và `Estimated Revenue` nên được hiểu là **ước tính dựa trên calendar availability**, không phải doanh thu hoặc booking thực tế được xác nhận từ Airbnb.
 
-## 11. PostgreSQL
+## 11. PostgreSQL và Power BI
 
 Tạo schema và bảng:
 
@@ -321,3 +396,18 @@ Thứ tự import CSV khuyến nghị:
 5. `fact_availability.csv`
 
 Import dimension trước, fact sau để tránh lỗi foreign key.
+
+Sau khi dữ liệu đã được load vào PostgreSQL, nên kết nối Power BI trực tiếp tới PostgreSQL thay vì import CSV:
+
+1. Mở Power BI Desktop.
+2. Chọn **Home** > **Get data** > **PostgreSQL database**.
+3. Server: `localhost:5432`.
+4. Database: `airbnb_bi`.
+5. Chọn 5 bảng trong schema `airbnb_seattle`.
+6. Kiểm tra relationship trong Model view:
+   - `fact_availability.date_id` -> `dim_date.date_id`
+   - `fact_availability.listing_id` -> `dim_listing.listing_id`
+   - `dim_listing.location_id` -> `dim_location.location_id`
+   - `dim_listing.room_type_id` -> `dim_room_type.room_type_id`
+
+Hướng dẫn dashboard Power BI xem thêm: `docs/powerbi_guide.md`.

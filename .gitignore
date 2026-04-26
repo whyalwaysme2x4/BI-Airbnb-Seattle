@@ -11,6 +11,9 @@ dist/
 venv/
 env/
 
+# Local environment variables
+.env
+
 # Jupyter
 .ipynb_checkpoints/
 
